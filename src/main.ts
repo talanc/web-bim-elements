@@ -23,6 +23,8 @@ scene.add(light);
 
 const material = new THREE.MeshLambertMaterial({ color: 0xff00ff });
 
+const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff });
+
 const axesHelper = new THREE.AxesHelper(1);
 scene.add(axesHelper);
 
@@ -42,6 +44,9 @@ animate();
 // Input
 //
 
+const c15024 = Models.createC("C15024", 152, 64, 15.5, 2.4);
+const th64 = Models.createTH("TH64", 64, 100, 1);
+
 const shedInput: Models.ShedInput = {
   user: {
     span: 6000,
@@ -51,8 +56,10 @@ const shedInput: Models.ShedInput = {
     pitch: 22
   },
   calc: {
-    column: Models.createC("C15024", 152, 64, 15.5, 2.4),
-    sideGirt: Models.createTH("TH64", 64, 100, 1),
+    rafter: c15024,
+    column: c15024,
+    roofPurlin: th64,
+    sideGirt: th64,
   }
 }
 
@@ -62,11 +69,30 @@ const shedInput: Models.ShedInput = {
 const shedBim = Models.createShedBim(shedInput);
 console.log(shedBim);
 
+// Outline
+
+const outline = [
+  new THREE.Vector3(0, 0, 0).divideScalar(1000),
+  new THREE.Vector3(0, 0, shedInput.user.height).divideScalar(1000),
+  new THREE.Vector3(shedInput.user.span / 2, 0, shedInput.user.height + Math.tan(THREE.MathUtils.degToRad(shedInput.user.pitch)) * shedInput.user.span / 2).divideScalar(1000),
+  new THREE.Vector3(shedInput.user.span, 0, shedInput.user.height).divideScalar(1000),
+  new THREE.Vector3(shedInput.user.span, 0, 0).divideScalar(1000),
+];
+const outlineGeometry = new THREE.BufferGeometry().setFromPoints(outline);
+const outlineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+const outlineLine = new THREE.Line(outlineGeometry, outlineMaterial);
+scene.add(outlineLine);
+
 //
 // Model
 //
 
-const allColumns = [...shedBim.columnsLeft, ...shedBim.columnsRight];
+const allColumns = [
+  ...shedBim.columnsLeft,
+  ...shedBim.columnsRight,
+  ...shedBim.raftersLeft,
+  ...shedBim.raftersRight,
+];
 
 for (const column of allColumns) {
   const shape = Models.createShape(column.mat);
@@ -84,4 +110,12 @@ for (const column of allColumns) {
   mesh.applyMatrix4(mat4);
 
   scene.add(mesh);
+
+  const points = [
+    column.line.start.clone().divideScalar(1000),
+    column.line.end.clone().divideScalar(1000),
+  ];
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line = new THREE.Line(lineGeometry, lineMaterial);
+  scene.add(line);
 }
